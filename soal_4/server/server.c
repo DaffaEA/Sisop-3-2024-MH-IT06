@@ -15,36 +15,31 @@ char* status(const char *searchString) {
         return NULL;
     }
 
-    // Allocate memory for the result string
-    size_t resultSize = 1024; // Initial size, can be adjusted
+    size_t resultSize = 1024;
     char *result = (char *)malloc(resultSize * sizeof(char));
     if (result == NULL) {
         printf("Memory allocation error!\n");
         fclose(file);
         return NULL;
     }
-    result[0] = '\0'; // Initialize result string
+    result[0] = '\0';
 
     int count = 1;
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file)) {
-        // Remove newline character if present
         line[strcspn(line, "\n")] = '\0';
-
         char *token = strtok(line, ",");
         int column = 1;
-        char thirdColumn[MAX_LINE_LENGTH]; // To store content of the second column
+        char thirdColumn[MAX_LINE_LENGTH];
         while (token != NULL) {
-            if (column == 3) { // If this is the second column
-                strcpy(thirdColumn, token); // Save content of the second column
+            if (column == 3) {
+                strcpy(thirdColumn, token);
             }
-            if (column == 4) { // If this is the fourth column
-                // Check if the content matches the search string
+            if (column == 4) {
                 if (strstr(token, searchString) != NULL) {
-                    // Concatenate the content of the second column to result
                     snprintf(result + strlen(result), resultSize - strlen(result), "%d. %s\n", count, thirdColumn);
                     count++;
-                    break; // No need to continue processing this line
+                    break;
                 }
             }
             token = strtok(NULL, ",");
@@ -63,35 +58,31 @@ char* tampil() {
         return NULL;
     }
 
-    // Allocate memory for the result string
-    size_t resultSize = 1024; // Initial size, can be adjusted
+    size_t resultSize = 1024;
     char *result = (char *)malloc(resultSize * sizeof(char));
     if (result == NULL) {
         printf("Memory allocation error!\n");
         fclose(file);
         return NULL;
     }
-    result[0] = '\0'; // Initialize result string
+    result[0] = '\0';
 
     int count = 1;
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file)) {
-        // Remove newline character if present
         line[strcspn(line, "\n")] = '\0';
-
         char *token = strtok(line, ",");
         int column = 1;
-        char thirdColumn[MAX_LINE_LENGTH]; // To store content of the second column
+        char thirdColumn[MAX_LINE_LENGTH];
         while (token != NULL) {
-            if (column == 3) { // If this is the second column
-                strcpy(thirdColumn, token); // Save content of the second column
+            if (column == 3) {
+                strcpy(thirdColumn, token);
             }
-            if (column == 4) { // If this is the fourth column
-                    // Concatenate the content of the second column to result
-                    snprintf(result + strlen(result), resultSize - strlen(result), "%d. %s\n", count, thirdColumn);
-                    count++;
-                    break; // No need to continue processing this line
-                }
+            if (column == 4) {
+                snprintf(result + strlen(result), resultSize - strlen(result), "%d. %s\n", count, thirdColumn);
+                count++;
+                break;
+            }
             token = strtok(NULL, ",");
             column++;
         }
@@ -108,37 +99,32 @@ char* genre(const char *searchString) {
         return NULL;
     }
 
-    // Allocate memory for the result string
-    size_t resultSize = 1024; // Initial size, can be adjusted
+    size_t resultSize = 1024;
     char *result = (char *)malloc(resultSize * sizeof(char));
     if (result == NULL) {
         printf("Memory allocation error!\n");
         fclose(file);
         return NULL;
     }
-    result[0] = '\0'; // Initialize result string
+    result[0] = '\0';
 
     int count = 1;
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file)) {
-        // Remove newline character if present
         line[strcspn(line, "\n")] = '\0';
-
         char *token = strtok(line, ",");
         int column = 1;
-        char thirdColumn[MAX_LINE_LENGTH]; // To store content of the second column
+        char thirdColumn[MAX_LINE_LENGTH];
         while (token != NULL) {
-            if (column == 3) { // If this is the second column
-                strcpy(thirdColumn, token); // Save content of the second column
+            if (column == 3) {
+                strcpy(thirdColumn, token);
             }
-            if (column == 2) { // If this is the fourth column
-                // Check if the content matches the search string
+            if (column == 2) {
                 if (strstr(token, searchString) != NULL) {
                     token = strtok(NULL, ",");
-                    // Concatenate the content of the second column to result
                     snprintf(result + strlen(result), resultSize - strlen(result), "%d. %s\n", count, token);
                     count++;
-                    break; // No need to continue processing this line
+                    break;
                 }
             }
             token = strtok(NULL, ",");
@@ -157,38 +143,34 @@ char* hari(const char *searchString) {
         return NULL;
     }
 
-    // Allocate memory for the result string
-    size_t resultSize = 1024; // Initial size, can be adjusted
+    size_t resultSize = 1024;
     char *result = (char *)malloc(resultSize * sizeof(char));
     if (result == NULL) {
         printf("Memory allocation error!\n");
         fclose(file);
         return NULL;
     }
-    result[0] = '\0'; // Initialize result string
+    result[0] = '\0';
 
     int count = 1;
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file)) {
-        // Remove newline character if present
         line[strcspn(line, "\n")] = '\0';
-
         char *token = strtok(line, ",");
         int column = 1;
-        char thirdColumn[MAX_LINE_LENGTH]; // To store content of the second column
+        char thirdColumn[MAX_LINE_LENGTH];
         while (token != NULL) {
-            if (column == 3) { // If this is the second column
-                strcpy(thirdColumn, token); // Save content of the second column
+            if (column == 3) {
+                strcpy(thirdColumn, token);
             }
-            if (column == 1) { // If this is the fourth column
-                // Check if the content matches the search string
+            if (column == 1) {
                 if (strstr(token, searchString) != NULL) {
                     for(int i = 0; i<2; i++){
                         token = strtok(NULL, ",");
                     }
                     snprintf(result + strlen(result), resultSize - strlen(result), "%d. %s\n", count, token);
                     count++;
-                    break; // No need to continue processing this line
+                    break;
                 }
             }
             token = strtok(NULL, ",");
@@ -201,7 +183,6 @@ char* hari(const char *searchString) {
 }
 
 int main(int argc, char const *argv[]) {
-
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -232,16 +213,13 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-
     if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
 
-
     valread = read( new_socket , buffer, 1024);
 
-    // Remove the newline character from the input string
     if (buffer[strlen(buffer) - 1] == '\n')
         buffer[strlen(buffer) - 1] = '\0';
 
@@ -251,7 +229,7 @@ int main(int argc, char const *argv[]) {
     if(strcmp("status", firstWord) == 0){
         char* statres = status(restOfString);
         send(new_socket, statres, strlen(statres), 0);
-        free(statres); // Free the memory allocated by status
+        free(statres);
     }else if(strcmp("tampilkan", firstWord) == 0){
         char* tampres = tampil();
          send(new_socket, tampres, strlen(tampres), 0);
@@ -265,9 +243,6 @@ int main(int argc, char const *argv[]) {
          send(new_socket, harires, strlen(harires), 0);
         free(harires);
     }else{
-        printf("what the fuck");
+        printf("invalid commands\n");
     }
-
 }
-
-
