@@ -329,7 +329,14 @@ void editRow(const char *filename, int rowNumber, const char *rowData) {
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    fprintf(logFile, "[%02d/%02d/%02d] [EDIT] %s diubah menjadi %s.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, rows[rowNumber - 1], rowData);
+    char *originalRow = strdup(rows[rowNumber - 1]);
+    originalRow[strcspn(originalRow, "\n")] = '\0';
+
+    // Log the edit to change.log
+    fprintf(logFile, "[%02d/%02d/%02d] [EDIT] %s diubah menjadi %s.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, originalRow, rowData);
+
+    // Free allocated memory
+    free(originalRow);
     fclose(logFile);
 }
 
