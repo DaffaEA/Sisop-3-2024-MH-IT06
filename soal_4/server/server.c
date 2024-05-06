@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <time.h>
+#include <dirent.h>
 
 #define PORT 8080
 #define MAX_LINE_LENGTH 1024
@@ -107,7 +109,7 @@ char* genre(const char *searchString) {
         char *token = strtok(line, ",");
         int column = 1;
         while (token != NULL) {
-            if (column == 3) {
+            if (column == 2) {
                 if (strstr(token, searchString) != NULL) {
                     token = strtok(NULL, ",");
                     snprintf(result + strlen(result), resultSize - strlen(result), "%d. %s\n", count, token);
@@ -139,6 +141,9 @@ char* hari(const char *searchString) {
         return NULL;
     }
     result[0] = '\0';
+
+    // Reset file pointer to the beginning of the file
+    fseek(file, 0, SEEK_SET);
 
     int count = 1;
     char line[MAX_LINE_LENGTH];
@@ -196,7 +201,7 @@ int findrow(const char *searchString) {
     return 0; // Return 0 if search string is not found
 }
 
-void deleteRow(const char *filename, int rowToDelete) {
+void deleteRow(const char *filename, int rowToDelete, const char* roww) {
     FILE *fp, *tempFile;
     char buffer[1024];
     int row = 0;
@@ -236,7 +241,20 @@ void deleteRow(const char *filename, int rowToDelete) {
 
     // Rename the temporary file to the original filename
     rename("temp.csv", filename);
+
+    // Log the deletion to change.log
+    FILE *logFile = fopen("../change.log", "a");
+    if (logFile == NULL) {
+        perror("Error opening log file");
+        return;
+    }
+
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    fprintf(logFile, "[%02d/%02d/%02d] [DEL] %s berhasil dihapus.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, roww);
+    fclose(logFile);
 }
+
 
 void addRow(const char *filename, const char *rowData) {
     FILE *file = fopen(filename, "a"); // Open the file in append mode
@@ -247,9 +265,19 @@ void addRow(const char *filename, const char *rowData) {
 
     fprintf(file, "\n%s", rowData); // Write the data to the file
     fclose(file); // Close the file
+
+    // Log the addition to change.log
+    FILE *logFile = fopen("../change.log", "a");
+    if (logFile == NULL) {
+        perror("Error opening log file");
+        return;
+    }
+
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    fprintf(logFile, "[%02d/%02d/%02d] [ADD] %s ditambahkan.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, rowData);
+    fclose(logFile);
 }
-
-
 #define MAX_COLS 100
 #define MAX_ROW_LEN 1000
 
@@ -291,7 +319,20 @@ void editRow(const char *filename, int rowNumber, const char *rowData) {
         }
     }
     fclose(file);
+
+    // Log the edit to change.log
+    FILE *logFile = fopen("../change.log", "a");
+    if (logFile == NULL) {
+        perror("Error opening log file");
+        return;
+    }
+
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    fprintf(logFile, "[%02d/%02d/%02d] [EDIT] %s diubah menjadi %s.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, rows[rowNumber - 1], rowData);
+    fclose(logFile);
 }
+
 
 
 int main(int argc, char const *argv[]) {
@@ -313,9 +354,9 @@ int main(int argc, char const *argv[]) {
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons( PORT );
+    address.sin_port = htons(PORT);
 
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0) {
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
@@ -324,62 +365,101 @@ int main(int argc, char const *argv[]) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
-    while(1){
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
+
+    while (1) {
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
 
-        valread = read( new_socket , buffer, 1024);
+        valread = read(new_socket, buffer, 1024);
+
+        printf("Received: %s\n", buffer);
 
         if (buffer[strlen(buffer) - 1] == '\n')
             buffer[strlen(buffer) - 1] = '\0';
 
         char *firstWord = strtok(buffer, " ");
-        char *restOfString = strtok(NULL, "");
+        char *restOfString = NULL;
 
-        if(strcmp("status", firstWord) == 0){
-            char* statres = status(restOfString);
-            send(new_socket, statres, strlen(statres), 0);
-            free(statres); // Free memory
-        }else if(strcmp("tampilkan", firstWord) == 0){
-            char* tampres = tampil();
-            send(new_socket, tampres, strlen(tampres), 0);
-            free(tampres); // Free memory
-        }else if(strcmp("genre", firstWord) == 0){
-            char* genreres = genre(restOfString);
-            send(new_socket, genreres, strlen(genreres), 0);
-            free(genreres); // Free memory
-        }else if(strcmp("hari", firstWord) == 0){
-            char* harires = hari(restOfString);
-            send(new_socket, harires, strlen(harires), 0);
-            free(harires); // Free memory
-        }else if(strcmp("delete", firstWord) == 0){
-            int delrow = findrow(restOfString);
-            deleteRow("../myanimelist.csv", delrow);
-            char delmessage[100] = "anime berhasil dihapus";
-            send(new_socket, delmessage, strlen(delmessage), 0);
-        }else if(strcmp("add", firstWord) == 0){
-            addRow("../myanimelist.csv", restOfString);
-            char addmessage[100] = "anime berhasil ditambahkan";
-            send(new_socket, addmessage, strlen(addmessage), 0);
-        }else if(strcmp("edit", firstWord) == 0){
-            char *restOfStringCopy = strdup(restOfString); 
-            char *secondWord = strtok(restOfStringCopy, ","); 
-            char *anotherword = strtok(NULL, "");
-            int editrow = findrow(secondWord);
-            if (editrow != 0) { // If the anime to be edited is found
-                editRow("../myanimelist.csv", editrow, anotherword);
-                char editmessage[100] = "Anime berhasil diubah";
-                send(new_socket, editmessage, strlen(editmessage), 0);
-            } else {
-                char notfoundmsg[100] = "Anime tidak ditemukan";
-                send(new_socket, notfoundmsg, strlen(notfoundmsg), 0);
-            }
-            free(restOfStringCopy); // Free memory
-        }else{
-            char invalidmsg[100] = "Invalid Command";
-            send(new_socket, invalidmsg, strlen(invalidmsg), 0);
+        if (firstWord != NULL) {
+            restOfString = strtok(NULL, "");
         }
+
+        if (firstWord != NULL) {
+            if (strcmp("status", firstWord) == 0) {
+                char* statres = status(restOfString);
+                if (statres != NULL) {
+                    send(new_socket, statres, strlen(statres), 0);
+                    free(statres); // Free memory
+                } else {
+                    char errmsg[] = "Error retrieving status.";
+                    send(new_socket, errmsg, strlen(errmsg), 0);
+                }
+            } else if (strcmp("tampilkan", firstWord) == 0) {
+                char* tampres = tampil();
+                if (tampres != NULL) {
+                    send(new_socket, tampres, strlen(tampres), 0);
+                    free(tampres); // Free memory
+                } else {
+                    char errmsg[] = "Error displaying data.";
+                    send(new_socket, errmsg, strlen(errmsg), 0);
+                }
+            } else if (strcmp("genre", firstWord) == 0) {
+                char* genreres = genre(restOfString);
+                if (genreres != NULL) {
+                    send(new_socket, genreres, strlen(genreres), 0);
+                    free(genreres); // Free memory
+                } else {
+                    char errmsg[] = "Error retrieving genre.";
+                    send(new_socket, errmsg, strlen(errmsg), 0);
+                }
+            } else if (strcmp("hari", firstWord) == 0) {
+                char* harires = hari(restOfString);
+                if (harires != NULL) {
+                    send(new_socket, harires, strlen(harires), 0);
+                    free(harires); // Free memory
+                } else {
+                    char errmsg[] = "Error retrieving day.";
+                    send(new_socket, errmsg, strlen(errmsg), 0);
+                }
+            } else if (strcmp("delete", firstWord) == 0) {
+                int delrow = findrow(restOfString);
+                if (delrow != -1) {
+                    deleteRow("../myanimelist.csv", delrow, restOfString);
+                    char delmessage[] = "Anime berhasil dihapus";
+                    send(new_socket, delmessage, strlen(delmessage), 0);
+                } else {
+                    char errmsg[] = "Anime tidak ditemukan";
+                    send(new_socket, errmsg, strlen(errmsg), 0);
+                }
+            } else if (strcmp("add", firstWord) == 0) {
+                addRow("../myanimelist.csv", restOfString);
+                char addmessage[] = "Anime berhasil ditambahkan";
+                send(new_socket, addmessage, strlen(addmessage), 0);
+            } else if (strcmp("edit", firstWord) == 0) {
+                char *restOfStringCopy = strdup(restOfString); 
+                char *secondWord = strtok(restOfStringCopy, ","); 
+                char *anotherword = strtok(NULL, "");
+                int editrow = findrow(secondWord);
+                if (editrow != 0) { // If the anime to be edited is found
+                    editRow("../myanimelist.csv", editrow, anotherword);
+                    char editmessage[] = "Anime berhasil diubah";
+                    send(new_socket, editmessage, strlen(editmessage), 0);
+                } else {
+                    char notfoundmsg[] = "Anime tidak ditemukan";
+                    send(new_socket, notfoundmsg, strlen(notfoundmsg), 0);
+                }
+                free(restOfStringCopy); // Free memory
+            } else {
+                char invalidmsg[] = "Invalid Command";
+                send(new_socket, invalidmsg, strlen(invalidmsg), 0);
+            }
+        }
+        memset(buffer, 0, sizeof(buffer));
+        close(new_socket); 
     }
+
+    return 0;
 }
+
