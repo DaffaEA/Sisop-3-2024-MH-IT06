@@ -142,7 +142,6 @@ char* hari(const char *searchString) {
     }
     result[0] = '\0';
 
-    // Reset file pointer to the beginning of the file
     fseek(file, 0, SEEK_SET);
 
     int count = 1;
@@ -175,13 +174,13 @@ int findrow(const char *searchString) {
     FILE *file = fopen("../myanimelist.csv", "r");
     if (file == NULL) {
         printf("Error opening file!\n");
-        return -1; // Return -1 to indicate an error
+        return -1;
     }
 
     int row = 0;
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file)) {
-        row++; // Increment row number for each line read
+        row++;
         line[strcspn(line, "\n")] = '\0';
         char *token = strtok(line, ",");
         int column = 1;
@@ -189,7 +188,7 @@ int findrow(const char *searchString) {
             if (column == 3) {
                 if (strstr(token, searchString) != NULL) {
                     fclose(file);
-                    return row; // Return the row number if search string found
+                    return row;
                 }
             }
             token = strtok(NULL, ",");
@@ -198,7 +197,7 @@ int findrow(const char *searchString) {
     }
 
     fclose(file);
-    return 0; // Return 0 if search string is not found
+    return 0;
 }
 
 void deleteRow(const char *filename, int rowToDelete, const char* roww) {
@@ -206,14 +205,12 @@ void deleteRow(const char *filename, int rowToDelete, const char* roww) {
     char buffer[1024];
     int row = 0;
 
-    // Open the original CSV file for reading
     fp = fopen(filename, "r");
     if (fp == NULL) {
         printf("Error opening file!\n");
         return;
     }
 
-    // Open a temporary file for writing
     tempFile = fopen("temp.csv", "w");
     if (tempFile == NULL) {
         printf("Error creating temporary file!\n");
@@ -221,28 +218,22 @@ void deleteRow(const char *filename, int rowToDelete, const char* roww) {
         return;
     }
 
-    // Read each line from the original file and write to temporary file, skipping the specified row
     while (fgets(buffer, sizeof(buffer), fp)) {
         row++;
 
-        // Skip the row to be deleted
         if (row == rowToDelete)
             continue;
 
         fputs(buffer, tempFile);
     }
 
-    // Close both files
     fclose(fp);
     fclose(tempFile);
 
-    // Remove the original file
     remove(filename);
 
-    // Rename the temporary file to the original filename
     rename("temp.csv", filename);
 
-    // Log the deletion to change.log
     FILE *logFile = fopen("../change.log", "a");
     if (logFile == NULL) {
         perror("Error opening log file");
@@ -257,16 +248,15 @@ void deleteRow(const char *filename, int rowToDelete, const char* roww) {
 
 
 void addRow(const char *filename, const char *rowData) {
-    FILE *file = fopen(filename, "a"); // Open the file in append mode
+    FILE *file = fopen(filename, "a");
     if (file == NULL) {
         perror("Error opening file");
         return;
     }
 
-    fprintf(file, "\n%s", rowData); // Write the data to the file
-    fclose(file); // Close the file
+    fprintf(file, "\n%s", rowData);
+    fclose(file);
 
-    // Log the addition to change.log
     FILE *logFile = fopen("../change.log", "a");
     if (logFile == NULL) {
         perror("Error opening log file");
@@ -278,11 +268,12 @@ void addRow(const char *filename, const char *rowData) {
     fprintf(logFile, "[%02d/%02d/%02d] [ADD] %s ditambahkan.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, rowData);
     fclose(logFile);
 }
+
 #define MAX_COLS 100
 #define MAX_ROW_LEN 1000
 
 void editRow(const char *filename, int rowNumber, const char *rowData) {
-    FILE *file = fopen(filename, "r"); // Open the file in read mode
+    FILE *file = fopen(filename, "r");
     if (file == NULL) {
         perror("Error opening file");
         return;
@@ -291,26 +282,22 @@ void editRow(const char *filename, int rowNumber, const char *rowData) {
     char rows[MAX_COLS][MAX_ROW_LEN];
     int currentRow = 0;
 
-    // Read each line of the CSV file
     while (fgets(rows[currentRow], MAX_ROW_LEN, file) != NULL && currentRow < MAX_COLS) {
         currentRow++;
     }
     fclose(file);
 
-    // Ensure the specified row number is valid
     if (rowNumber < 1 || rowNumber > currentRow) {
         printf("Invalid row number\n");
         return;
     }
 
-    // Open the file in write mode to overwrite the existing content
     file = fopen(filename, "w");
     if (file == NULL) {
         perror("Error opening file");
         return;
     }
 
-    // Write all the rows back to the file, replacing the specified row with the new data if applicable
     for (int i = 0; i < currentRow; i++) {
         if (i == rowNumber - 1) {
             fprintf(file, "%s\n", rowData);
@@ -320,7 +307,6 @@ void editRow(const char *filename, int rowNumber, const char *rowData) {
     }
     fclose(file);
 
-    // Log the edit to change.log
     FILE *logFile = fopen("../change.log", "a");
     if (logFile == NULL) {
         perror("Error opening log file");
@@ -331,16 +317,10 @@ void editRow(const char *filename, int rowNumber, const char *rowData) {
     struct tm *tm = localtime(&t);
     char *originalRow = strdup(rows[rowNumber - 1]);
     originalRow[strcspn(originalRow, "\n")] = '\0';
-
-    // Log the edit to change.log
     fprintf(logFile, "[%02d/%02d/%02d] [EDIT] %s diubah menjadi %s.\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900, originalRow, rowData);
-
-    // Free allocated memory
     free(originalRow);
     fclose(logFile);
 }
-
-
 
 int main(int argc, char const *argv[]) {
     int server_fd, new_socket, valread;
@@ -398,7 +378,7 @@ int main(int argc, char const *argv[]) {
                 char* statres = status(restOfString);
                 if (statres != NULL) {
                     send(new_socket, statres, strlen(statres), 0);
-                    free(statres); // Free memory
+                    free(statres);
                 } else {
                     char errmsg[] = "Error retrieving status.";
                     send(new_socket, errmsg, strlen(errmsg), 0);
@@ -407,7 +387,7 @@ int main(int argc, char const *argv[]) {
                 char* tampres = tampil();
                 if (tampres != NULL) {
                     send(new_socket, tampres, strlen(tampres), 0);
-                    free(tampres); // Free memory
+                    free(tampres);
                 } else {
                     char errmsg[] = "Error displaying data.";
                     send(new_socket, errmsg, strlen(errmsg), 0);
@@ -416,7 +396,7 @@ int main(int argc, char const *argv[]) {
                 char* genreres = genre(restOfString);
                 if (genreres != NULL) {
                     send(new_socket, genreres, strlen(genreres), 0);
-                    free(genreres); // Free memory
+                    free(genreres);
                 } else {
                     char errmsg[] = "Error retrieving genre.";
                     send(new_socket, errmsg, strlen(errmsg), 0);
@@ -425,7 +405,7 @@ int main(int argc, char const *argv[]) {
                 char* harires = hari(restOfString);
                 if (harires != NULL) {
                     send(new_socket, harires, strlen(harires), 0);
-                    free(harires); // Free memory
+                    free(harires);
                 } else {
                     char errmsg[] = "Error retrieving day.";
                     send(new_socket, errmsg, strlen(errmsg), 0);
@@ -449,7 +429,7 @@ int main(int argc, char const *argv[]) {
                 char *secondWord = strtok(restOfStringCopy, ","); 
                 char *anotherword = strtok(NULL, "");
                 int editrow = findrow(secondWord);
-                if (editrow != 0) { // If the anime to be edited is found
+                if (editrow != 0) {
                     editRow("../myanimelist.csv", editrow, anotherword);
                     char editmessage[] = "Anime berhasil diubah";
                     send(new_socket, editmessage, strlen(editmessage), 0);
@@ -457,16 +437,15 @@ int main(int argc, char const *argv[]) {
                     char notfoundmsg[] = "Anime tidak ditemukan";
                     send(new_socket, notfoundmsg, strlen(notfoundmsg), 0);
                 }
-                free(restOfStringCopy); // Free memory
+                free(restOfStringCopy);
             } else {
                 char invalidmsg[] = "Invalid Command";
                 send(new_socket, invalidmsg, strlen(invalidmsg), 0);
             }
         }
         memset(buffer, 0, sizeof(buffer));
-        close(new_socket); 
+        close(new_socket);
     }
 
     return 0;
 }
-
