@@ -32,18 +32,18 @@ int main(int argc, char const *argv[]) {
         printf("\nConnection Failed \n");
         return -1;
     }
-
+    
     
         char input[100];
         fgets(input, sizeof(input), stdin);
 
-      
+        // Send the input to the server
         send(sock, input, strlen(input), 0);
+        // Receive and print the response from the server
         valread = read(sock, buffer, 1024);
         printf("%s\n", buffer);
-
+   
+    
 
     return 0;
 }
-
-
