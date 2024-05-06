@@ -438,7 +438,11 @@ int main(int argc, char const *argv[]) {
                     send(new_socket, notfoundmsg, strlen(notfoundmsg), 0);
                 }
                 free(restOfStringCopy);
-            } else {
+            } else if(strcmp("exit", firstWord) == 0){
+            	char exitmsg[] = "Exiting the client";
+            	send(new_socket, exitmsg, strlen(exitmsg), 0);
+            	return 0;
+            }else {
                 char invalidmsg[] = "Invalid Command";
                 send(new_socket, invalidmsg, strlen(invalidmsg), 0);
             }
