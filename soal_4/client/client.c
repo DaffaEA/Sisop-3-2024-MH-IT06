@@ -9,6 +9,7 @@
 #define PORT 8080
 
 int main(int argc, char const *argv[]) {
+while(1){
     struct sockaddr_in address;
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
@@ -35,16 +36,20 @@ int main(int argc, char const *argv[]) {
     
     
         char input[100];
+        printf("you : ");
         fgets(input, sizeof(input), stdin);
 
         // Send the input to the server
         send(sock, input, strlen(input), 0);
         // Receive and print the response from the server
         valread = read(sock, buffer, 1024);
-        printf("%s\n", buffer);
+        printf("server : \n%s\n", buffer);
+        
+        if(strcmp(input, "exit") == 0){
+        return 0;
+        }
    
-    
+    }
 
     return 0;
 }
-
