@@ -155,4 +155,205 @@ int main() {
 -Menutup file
 
  ### Rate.c
- 
+```c
+const char *get_filename(const char *path) {
+    const char *filename = strrchr(path, '/');
+    if (filename == NULL)
+        return path;
+    else
+        return filename + 1;
+}
+```
+- Mencari kemunculan terakhir char "/" dengan stchr dan disimpan dalam filename
+- Apabila tidak menemukan return seperti asalnya
+- Apabila menemukan mengambil filename + 1 untuk menghapus "/" dalam filename
+
+```c
+void readFromSharedMemory(key_t key) {
+    int shmid = shmget(key, 0, 0666);
+    char *shm_ptr = (char *)shmat(shmid, NULL, 0);
+    
+    const char *filename = NULL;
+    if (key == 1233) {
+        filename = get_filename(shm_ptr);
+        printf("Type: Parking Lot\nFilename: %s\n", filename);
+    } else if (key == 1235) {
+        filename = get_filename(shm_ptr);
+        printf("Type: Trash Can\nFilename: %s\n", filename);
+    }
+    
+    printf("------------------------------------\n");
+
+    shmdt(shm_ptr);
+}
+```
+ - Mengambil identifikasi shared memory (shmid) menggunakan fungsi shmget() dengan kunci (key) yang diberikan.
+ - Menempelkan (attach) shared memory ke ruang alamat proses menggunakan shmat() dan mendapatkan pointer ke shared memory tersebut.
+ - Memeriksa nilai kunci yang diberikan. Jika kunci adalah 1233, itu menganggap data di shared memory sebagai "Parking Lot". Jika kunci adalah 1235, itu menganggap data sebagai data "Trash Can". Ini dilakukan dengan memanggil fungsi get_filename() untuk mendapatkan nama file dari data tersebut.
+ - Mencetak informasi yang diperoleh, yaitu jenis ("Type") dan nama file ("Filename"), sesuai dengan jenis data yang dikenali.
+ - Melepaskan (detach) shared memory dari ruang alamat proses menggunakan shmdt().
+
+```c
+void find_max_rating(key_t key) {
+    float max_rating = -1;
+    char max_name[100] = "";
+    
+    int shmid = shmget(key, 0, 0666);
+    char *shm_ptr = (char *)shmat(shmid, NULL, 0);
+    char *data = strdup(shm_ptr);
+
+    char *line = strtok(data, "\n");
+```
+- Membuat variabel max_rating yang diinisialisasi dengan nilai -1 dan max_name yang diinisialisasi dengan string kosong. Ini akan digunakan untuk menyimpan nilai tertinggi dan nama yang terkait.
+- Mengambil identifikasi shared memory (shmid) menggunakan fungsi shmget() dengan kunci (key) yang diberikan.
+- Menempelkan (attach) shared memory ke ruang alamat proses menggunakan shmat() dan mendapatkan pointer ke shared memory tersebut.
+- Membuat salinan dari data yang ada di shared memory ke dalam variabel data menggunakan fungsi strdup(). Ini dilakukan untuk mempermudah pemrosesan data tanpa mengubah data yang ada di shared memory.
+- Menggunakan fungsi strtok() untuk membagi data menjadi baris-baris terpisah. Setiap baris kemudian diperiksa untuk mencari nilai rating.
+
+```c
+   while (line != NULL) {
+        char name[100];
+        float rating;
+        sscanf(line, "%[^,], %f", name, &rating);
+
+        if (rating > max_rating) {
+            max_rating = rating;
+            strcpy(max_name, name);
+        }
+
+        line = strtok(NULL, "\n");
+    }
+
+    free(data);
+    shmdt(shm_ptr);
+
+    printf("Name: %s\nRating: %.1f\n", max_name, max_rating);
+}
+```
+- Melakukan looping melalui setiap baris dari suatu data yang diwakili oleh variabel line. Loop ini berjalan hingga line tidak lagi menunjuk ke baris data (yaitu line menjadi NULL).
+- sscanf digunakan untuk memformat data dari line. Data tersebut adalah nama (name) dan nilai rating (rating). Fungsi sscanf membaca data dari line sesuai dengan pola yang diberikan dalam argumen kedua, kemudian menyimpan hasilnya di variabel name dan rating.
+- membandingkan nilai rating (rating) dengan nilai maksimum yang sudah ada (max_rating). Jika nilai rating saat ini lebih besar dari nilai maksimum yang ada, maka nilai maksimum (max_rating) diperbarui dengan nilai rating saat ini, dan nama yang sesuai (name) disalin ke dalam variabel max_name.
+- memperbarui pointer line untuk menunjuk ke baris data berikutnya. Ini dilakukan dengan menggunakan fungsi strtok dengan argumen NULL untuk melanjutkan pencarian dari tempat terakhir kali dipanggil, dan dengan menggunakan pemisah baris baru (\n).
+- program membebaskan memori yang dialokasikan untuk variabel data menggunakan fungsi free. Juga, program melepaskan memori bersama (shared memory) menggunakan shmdt dengan melepaskan pointer ke memori bersama (shm_ptr).
+- mencetak nama (max_name) dan nilai rating maksimum (max_rating) ke layar.
+
+```c
+int main() {
+    readFromSharedMemory(1233);
+    find_max_rating(1234);
+    printf("\n\n");
+    readFromSharedMemory(1235);
+    find_max_rating(1236);
+    
+    return 0;
+}
+```
+- Memanggil fungsi diatas dengan key shared memory yang sesuai.
+
+### db.c
+```c
+const char *get_filename(const char **path) {
+    const char *filename = strrchr(*path, '/');
+    if (filename == NULL)
+        return *path;
+    else
+        return filename + 1;
+}
+```
+- Fungsi sama seperti yang ada di rate.c
+
+```c
+char *read_shared_memory(key_t key) {
+    int shmid = shmget(key, 0, 0666);
+    char *shm_ptr = (char *)shmat(shmid, NULL, 0);
+    char *string = strdup(shm_ptr);
+    shmdt(shm_ptr);
+    return string;
+}
+```
+- Mencari ID dari shared memory dengan kunci (key) yang diberikan dengan shmget.
+- Menghubungkan program ke shared memory dengan ID yang ditemukan sebelumnya, mengembalikan pointer ke area shared memory dengan shmat.
+- Membuat salinan dari string yang ada di shared memory menggunakan fungsi strdup, sehingga hasilnya adalah alamat memori yang baru dialokasikan untuk string tersebut strdup.
+- Memutuskan hubungan program dengan shared memory dengan shmdt.
+- Mengembalikan pointer ke string yang telah disalin dari shared memory.
+
+```c
+void updatePath(char **path) {
+    char *token;
+    const char search[] = "new-data";
+    const char replacement[] = "microservices/database";
+
+    token = strstr(*path, search);
+
+    if (token != NULL) {
+        size_t length_before = token - *path;
+        size_t length_after = strlen(token + strlen(search));
+        char *new_path = (char *)malloc(length_before + strlen(replacement) + length_after + 1);
+        strncpy(new_path, *path, length_before);
+        new_path[length_before] = '\0';
+        strcat(new_path, replacement);
+        strcat(new_path, token + strlen(search));
+        free(*path);
+        *path = new_path;
+    }
+}
+```
+- Fungsi ini menggunakan strstr untuk mencari kemunculan pertama dari substring yang dicari (search) dalam string path.
+- Jika substring yang dicari ditemukan (token != NULL), langkah-langkah perbaruan dilakukan.
+- Panjang bagian sebelum dan sesudah substring yang dicari dihitung untuk mengalokasikan memori yang tepat untuk string hasil.
+- Memori baru dialokasikan dengan ukuran yang sesuai untuk menyimpan string hasil.
+- Bagian string sebelum substring yang dicari disalin ke string hasil.
+- Substring pengganti ditambahkan ke string hasil.
+- Bagian string setelah substring yang dicari disalin ke string hasil.
+- Memori yang dialokasikan sebelumnya untuk string path dilepaskan.
+- Pointer path diperbarui dengan alamat memori baru yang berisi string hasil.
+
+```c
+int main() {
+    char *string_1 = read_shared_memory(1233);
+    char *oldstring_1 = read_shared_memory(1233);
+    updatePath(&string_1);
+    if (rename(oldstring_1, string_1) == 0) {
+        const char *basename = get_filename((const char **)&oldstring_1);
+        FILE *log_file = fopen("database/db.log", "a");
+        if (log_file != NULL) {
+            time_t raw_time;
+            struct tm *time_info;
+            time(&raw_time);
+            time_info = localtime(&raw_time);
+            fprintf(log_file, "[%02d/%02d/%04d %02d:%02d:%02d] [Parking Lot] [%s]\n",
+                    time_info->tm_mday, time_info->tm_mon + 1, time_info->tm_year + 1900,
+                    time_info->tm_hour, time_info->tm_min, time_info->tm_sec, basename);
+            fclose(log_file);
+        }
+    }
+    free(oldstring_1);
+
+    char *string_2 = read_shared_memory(1235);
+    char *oldstring_2 = read_shared_memory(1235);
+    updatePath(&string_2);
+    if (rename(oldstring_2, string_2) == 0) {
+        const char *basename = get_filename((const char **)&oldstring_2);
+        FILE *log_file = fopen("database/db.log", "a");
+        if (log_file != NULL) {
+            time_t raw_time;
+            struct tm *time_info;
+            time(&raw_time);
+            time_info = localtime(&raw_time);
+            fprintf(log_file, "[%02d/%02d/%04d %02d:%02d:%02d] [Trash Can] [%s]\n",
+                    time_info->tm_mday, time_info->tm_mon + 1, time_info->tm_year + 1900,
+                    time_info->tm_hour, time_info->tm_min, time_info->tm_sec, basename);
+            fclose(log_file);
+        }
+    }
+    free(oldstring_2);
+
+    return 0;
+}
+```
+- Fungsi untuk membaca string dari shared memory dengan ID 1233 dan 1235, masing-masing disimpan dalam pointer string_1, string_2, oldstring_1 dan oldstring_2 dengan fungsi read_shared_memory.
+- Memperbarui path yang disimpan dalam string_1 dan string_2 dengan menggunakan fungsi updatePath.
+- Mencoba untuk mengubah nama file dari oldstring_1 menjadi string_1, dan dari oldstring_2 menjadi string_2. Jika berhasil (return value 0), ini menunjukkan bahwa file telah berhasil direname dengan fungsi rename.
+- Jika rename berhasil, program membuka file log db.log dalam mode append, kemudian menuliskan pesan log yang mencatat waktu (tanggal dan jam), jenis aktivitas (Parking Lot atau Trash Can), dan nama file (basename) yang terlibat dalam operasi.
+- memori yang dialokasikan untuk oldstring_1 dan oldstring_2 dibebaskan menggunakan free.
+
