@@ -356,6 +356,21 @@ int main() {
 - Mencoba untuk mengubah nama file dari oldstring_1 menjadi string_1, dan dari oldstring_2 menjadi string_2. Jika berhasil (return value 0), ini menunjukkan bahwa file telah berhasil direname dengan fungsi rename.
 - Jika rename berhasil, program membuka file log db.log dalam mode append, kemudian menuliskan pesan log yang mencatat waktu (tanggal dan jam), jenis aktivitas (Parking Lot atau Trash Can), dan nama file (basename) yang terlibat dalam operasi.
 - memori yang dialokasikan untuk oldstring_1 dan oldstring_2 dibebaskan menggunakan free.
+  
+## Output
+
+### Auth.c
+#### - Before
+![Screenshot 2024-05-11 115209](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/f2644e24-a7a4-46d5-b165-38054e436353)
+#### - After
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/c71678e0-d262-4294-8c5f-360643fa7138)
+
+### Rate.c
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/c2bed9f3-191e-4f39-af61-a35dabe44bee)
+
+### db.c
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/45092369-b6c1-41c8-b824-db8aaf5a0038)
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/7c337e44-c1a2-4ec3-bef6-f64444587697)
 
 # Soal 2
 
@@ -975,3 +990,10 @@ int main(int argc, char const *argv[]) {
 - Setelah menangani pesan dari klien, buffer akan direset untuk digunakan kembali dengan mengosongkannya menggunakan memset.
 - Koneksi dengan klien akan ditutup menggunakan sistem panggilan close
 - Jika klien mengirimkan perintah "exit", server akan mengirimkan pesan ke klien bahwa klien akan keluar, kemudian server juga akan keluar dari loop utama dan menutup koneksi dengan klien.
+
+## Output
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/8bc73264-84a3-4b19-a9d4-767f233da7b8)
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/f52b0377-d650-4910-90e7-af4167ec4bf0)
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/2b9ff8f6-8a6f-443c-8597-3e66854fe70c)
+
+
