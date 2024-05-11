@@ -373,6 +373,337 @@ int main() {
 ![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/132379720/7c337e44-c1a2-4ec3-bef6-f64444587697)
 
 # Soal 2
+Max Verstappen 🏎️ seorang pembalap F1 dan programer memiliki seorang adik bernama Min Verstappen (masih SD) sedang menghadapi tahap paling kelam dalam kehidupan yaitu perkalian matematika, Min meminta bantuan Max untuk membuat kalkulator perkalian sederhana (satu sampai sembilan). Sembari Max nguli dia menyuruh Min untuk belajar perkalian dari web (referensi) agar tidak bergantung pada kalkulator.
+(Wajib menerapkan konsep pipes dan fork seperti yang dijelaskan di modul Sisop. Gunakan 2 pipes dengan diagram seperti di modul 3).
+Sesuai request dari adiknya Max ingin nama programnya dudududu.c. Sebelum program parent process dan child process, ada input dari user berupa 2 string. Contoh input: tiga tujuh. 
+Pada parent process, program akan mengubah input menjadi angka dan melakukan perkalian dari angka yang telah diubah. Contoh: tiga tujuh menjadi 21. 
+Pada child process, program akan mengubah hasil angka yang telah diperoleh dari parent process menjadi kalimat. Contoh: `21` menjadi “dua puluh satu”.
+Max ingin membuat program kalkulator dapat melakukan penjumlahan, pengurangan, dan pembagian, maka pada program buatlah argumen untuk menjalankan program : 
+```
+   i. perkalian	: ./kalkulator -kali
+   ii. penjumlahan	: ./kalkulator -tambah
+   iii. pengurangan	: ./kalkulator -kurang
+   iv. pembagian	: ./kalkulator -bagi
+```
+
+Beberapa hari kemudian karena Max terpaksa keluar dari Australian Grand Prix 2024 membuat Max tidak bersemangat untuk melanjutkan programnya sehingga kalkulator yang dibuatnya cuma menampilkan hasil positif jika bernilai negatif maka program akan print “ERROR” serta cuma menampilkan bilangan bulat jika ada bilangan desimal maka dibulatkan ke bawah.
+
+Setelah diberi semangat, Max pun melanjutkan programnya dia ingin (pada child process) kalimat akan di print dengan contoh format : 
+i. perkalian	: “hasil perkalian tiga dan tujuh adalah dua puluh satu.”
+ii. penjumlahan	: “hasil penjumlahan tiga dan tujuh adalah sepuluh.”
+iii. pengurangan	: “hasil pengurangan tujuh dan tiga adalah empat.”
+iv. pembagian	: “hasil pembagian tujuh dan tiga adalah dua.”
+
+Max ingin hasil dari setiap perhitungan dicatat dalam sebuah log yang diberi nama histori.log. Pada parent process, lakukan pembuatan file log berdasarkan data yang dikirim dari child process. 
+```
+Format: [date] [type] [message]
+Type: KALI, TAMBAH, KURANG, BAGI
+Ex:
+1. [10/03/24 00:29:47] [KALI] tujuh kali enam sama dengan empat puluh dua.
+2. [10/03/24 00:30:00] [TAMBAH] sembilan tambah sepuluh sama dengan sembilan belas.
+3. [10/03/24 00:30:12] [KURANG] ERROR pada pengurangan.
+```
+
+
+### Pengerjaan
+### dudududu.c (revisi)
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <time.h>
+#include <math.h>
+
+// Function to convert words to numbers
+int wordsToNumbers(char *word) {
+    const char *words[] = {"", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"};
+    for (int i = 1; i <= 9; i++) {
+        if (strcmp(word, words[i]) == 0) {
+            return i;
+        }
+    }
+    return -1; // Return -1 for unknown words
+}
+
+// Function to convert numbers to words
+char *intToWords(int num) {
+    const char *satuan[] = {"", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"};
+    const char *belasan[] = {"", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas", "enam belas", "tujuh belas", "delapan belas", "sembilan belas"};
+    const char *puluh[] = {"", "sepuluh", "dua puluh", "tiga puluh", "empat puluh", "lima puluh", "enam puluh", "tujuh puluh", "delapan puluh", "sembilan puluh"};
+
+    char *result = (char *)malloc(100 * sizeof(char));
+    strcpy(result, "");
+
+    if (num >= 100) {
+        strcat(result, satuan[num / 100]);
+        strcat(result, " ratus ");
+        num %= 100;
+    }
+
+    if (num >= 20) {
+        strcat(result, puluh[num / 10]);
+        strcat(result, " ");
+        num %= 10;
+    }
+
+    if (num >= 11 && num <= 19) {
+        strcat(result, belasan[num - 10]);
+    } else if (num >= 1 && num <= 9) {
+        strcat(result, satuan[num]);
+    }
+
+    return result;
+}
+
+// Function to write to log file
+void writeToLog(const char *operation, int num1, int num2, int result) {
+    FILE *logFile = fopen("histori.log", "a");
+    if (logFile != NULL) {
+        time_t rawtime;
+        struct tm *info;
+        char buffer[80];
+
+        time(&rawtime);
+        info = localtime(&rawtime);
+        strftime(buffer, 80, "%d/%m/%y %H:%M:%S", info);
+
+        char upperOperation[10];
+        int i;
+        for (i = 0; operation[i]; i++) {
+            upperOperation[i] = toupper(operation[i]);
+        }
+        upperOperation[i] = '\0';
+
+        if (result < 0) {
+            fprintf(logFile, "[%s] [%s] ERROR pada %s.\n", buffer, upperOperation, upperOperation);
+        } else {
+            fprintf(logFile, "[%s] [%s] %s %s %s sama dengan %s.\n", buffer, upperOperation, intToWords(num1), operation, intToWords(num2), intToWords(result));
+        }
+        fclose(logFile);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <operation>\n", argv[0]);
+        return 1;
+    }
+
+    char *operation = argv[1];
+    char operand1[20], operand2[20];
+
+    printf("Masukkan angka pertama: ");
+    scanf("%s", operand1);
+    printf("Masukkan angka kedua: ");
+    scanf("%s", operand2);
+
+    int num1 = wordsToNumbers(operand1);
+    int num2 = wordsToNumbers(operand2);
+
+    if (num1 == -1 || num2 == -1) {
+        printf("Kata tidak valid.\n");
+        return 1;
+    }
+
+    int result = 0;
+
+    if (strcmp(operation, "-kali") == 0) {
+        result = num1 * num2;
+    } else if (strcmp(operation, "-tambah") == 0) {
+        result = num1 + num2;
+    } else if (strcmp(operation, "-kurang") == 0) {
+        result = num1 - num2;
+        if (result < 0) {
+            printf("ERROR: Hasil negatif.\n");
+            return 1;
+        }
+    } else if (strcmp(operation, "-bagi") == 0) {
+        if (num2 == 0) {
+            printf("ERROR: Pembagian oleh nol.\n");
+            return 1;
+        }
+        result = num1 / num2;
+    } else {
+        printf("Operasi tidak valid.\n");
+        return 1;
+    }
+
+    printf("Hasil %s %s dan %s adalah %s.\n", operation + 1, operand1, operand2, intToWords(result));
+
+    writeToLog(operation + 1, num1, num2, result);
+
+    return 0;
+}
+```
+```c
+const char *words[] = {"", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"};
+    for (int i = 1; i <= 9; i++) {
+        if (strcmp(word, words[i]) == 0) {
+            return i;
+        }
+    }
+    return -1; // Return -1 for unknown words
+}
+
+// Function to convert numbers to words
+char *intToWords(int num) {
+    const char *satuan[] = {"", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"};
+    const char *belasan[] = {"", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas", "enam belas", "tujuh belas", "delapan belas", "sembilan belas"};
+    const char *puluh[] = {"", "sepuluh", "dua puluh", "tiga puluh", "empat puluh", "lima puluh", "enam puluh", "tujuh puluh", "delapan puluh", "sembilan puluh"};
+
+```
+- Array words digunakan untuk menyimpan kata-kata dalam bahasa Indonesia yang mewakili angka-angka dari 0 hingga 9.
+
+- Melalui loop for, setiap kata dalam array words diperiksa satu per satu untuk mencocokkan kata yang diberikan sebagai argumen fungsi wordsToNumbers().
+
+- Jika kata cocok, indeks kata tersebut dikembalikan sebagai hasil konversi. Jika tidak, fungsi mengembalikan -1 untuk menunjukkan bahwa kata tersebut tidak dikenali sebagai angka.
+
+- Fungsi intToWords() mengonversi angka menjadi kata-kata dalam bahasa Indonesia. Ini dilakukan dengan memeriksa setiap digit angka dan menyusun kata-kata yang sesuai dari tiga array: satuan, belasan, dan puluh.
+
+- Proses konversi dimulai dengan memeriksa apakah angka tersebut lebih besar dari atau sama dengan 100 dan kemudian dilanjutkan dengan memeriksa puluhan dan satuan.
+- 
+- Hasil konversi kata-kata dikembalikan sebagai hasil fungsi.
+
+- Fungsi writeToLog() digunakan untuk menulis operasi dan hasilnya ke file log.
+
+- Pada main(), pengguna diminta untuk memasukkan operasi (tambah, kurang, kali, atau bagi) dan dua angka dalam kata-kata.
+
+- Angka-angka tersebut dikonversi menjadi nilai numerik menggunakan fungsi wordsToNumbers() dan kemudian operasi perhitungan dilakukan.
+
+- Hasil operasi ditampilkan dalam kata-kata dan juga ditulis ke file log menggunakan fungsi writeToLog().
+  
+```c
+// Function to write to log file
+void writeToLog(const char *operation, int num1, int num2, int result) {
+    FILE *logFile = fopen("histori.log", "a");
+    if (logFile != NULL) {
+        time_t rawtime;
+        struct tm *info;
+        char buffer[80];
+
+        time(&rawtime);
+        info = localtime(&rawtime);
+        strftime(buffer, 80, "%d/%m/%y %H:%M:%S", info);
+
+        char upperOperation[10];
+        int i;
+        for (i = 0; operation[i]; i++) {
+            upperOperation[i] = toupper(operation[i]);
+        }
+        upperOperation[i] = '\0';
+
+        if (result < 0) {
+            fprintf(logFile, "[%s] [%s] ERROR pada %s.\n", buffer, upperOperation, upperOperation);
+        } else {
+            fprintf(logFile, "[%s] [%s] %s %s %s sama dengan %s.\n", buffer, upperOperation, intToWords(num1), operation, intToWords(num2), intToWords(result));
+        }
+        fclose(logFile);
+    }
+}
+```
+
+-Fungsi membuka file log "histori.log" dalam mode append.
+
+-Memeriksa keberhasilan pembukaan file log.
+
+-Mendapatkan waktu lokal saat ini dan mengonversinya menjadi format yang sesuai.
+
+-Mengonversi operasi matematika menjadi huruf kapital.
+
+-Jika hasil operasi matematika negatif, menulis pesan kesalahan ke dalam file log.
+
+-Jika hasil operasi matematika tidak negatif, menulis operasi dan hasilnya (dalam kata-kata bahasa Indonesia) ke dalam file log.
+
+-Menutup file log setelah selesai menulis.
+
+```c
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <operation>\n", argv[0]);
+        return 1;
+    }
+
+    char *operation = argv[1];
+    char operand1[20], operand2[20];
+
+    printf("Masukkan angka pertama: ");
+    scanf("%s", operand1);
+    printf("Masukkan angka kedua: ");
+    scanf("%s", operand2);
+
+    int num1 = wordsToNumbers(operand1);
+    int num2 = wordsToNumbers(operand2);
+
+    if (num1 == -1 || num2 == -1) {
+        printf("Kata tidak valid.\n");
+        return 1;
+    }
+
+    int result = 0;
+
+    if (strcmp(operation, "-kali") == 0) {
+        result = num1 * num2;
+    } else if (strcmp(operation, "-tambah") == 0) {
+        result = num1 + num2;
+    } else if (strcmp(operation, "-kurang") == 0) {
+        result = num1 - num2;
+        if (result < 0) {
+            printf("ERROR: Hasil negatif.\n");
+            return 1;
+        }
+    } else if (strcmp(operation, "-bagi") == 0) {
+        if (num2 == 0) {
+            printf("ERROR: Pembagian oleh nol.\n");
+            return 1;
+        }
+        result = num1 / num2;
+    } else {
+        printf("Operasi tidak valid.\n");
+        return 1;
+    }
+
+    printf("Hasil %s %s dan %s adalah %s.\n", operation + 1, operand1, operand2, intToWords(result));
+
+    writeToLog(operation + 1, num1, num2, result);
+
+    return 0;
+}
+```
+
+-Fungsi main memiliki dua argumen: argc yang merupakan jumlah argumen baris perintah, dan argv yang merupakan array dari string-string argumen baris perintah.
+
+-Pertama-tama, fungsi memeriksa apakah jumlah argumen yang diberikan tepat 2. Jika tidak, maka pesan penggunaan program dicetak, dan program mengembalikan nilai 1, menandakan bahwa ada kesalahan dalam penggunaan.
+
+-Argumen operasi (tambah, kurang, kali, atau bagi) disimpan dalam variabel operation.
+
+-Variabel operand1 dan operand2 dideklarasikan untuk menyimpan kata-kata yang akan dikonversi menjadi angka.
+
+-Pengguna diminta untuk memasukkan dua angka dalam bentuk kata-kata menggunakan scanf.
+
+-Angka-angka tersebut dikonversi menjadi nilai numerik menggunakan fungsi wordsToNumbers.
+
+-Jika salah satu angka tidak valid (hasil konversi adalah -1), program mencetak pesan kesalahan bahwa kata tidak valid dan mengembalikan nilai 1.
+
+-Jika kedua angka valid, dilakukan operasi matematika sesuai dengan argumen operasi yang diberikan.
+
+-Jika operasi adalah pengurangan (-kurang), dilakukan pemeriksaan apakah hasilnya negatif. Jika ya, program mencetak pesan kesalahan dan mengembalikan nilai 1.
+
+-Jika operasi adalah pembagian (-bagi), dilakukan pemeriksaan apakah pembaginya adalah nol. Jika ya, program mencetak pesan kesalahan dan mengembalikan nilai 1.
+
+-Hasil operasi dan argumen operasi yang dimodifikasi (tanpa tanda minus) dicetak ke layar.
+
+-Hasil operasi, argumen operasi, dan angka-angka yang dioperasikan dicatat dalam file log menggunakan fungsi writeToLog.
+
+-Program mengembalikan nilai 0, menunjukkan bahwa tidak ada kesalahan yang terjadi dalam eksekusi program.
+
+### Dokumentasi Setelah Revisi 
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/142997842/39f38c7d-a4bc-4491-9771-34cce1d632cf)
+
+![image](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/142997842/e3b05026-bf78-4095-ad0d-7f40e43a530e)
 
 # Soal 3
 
