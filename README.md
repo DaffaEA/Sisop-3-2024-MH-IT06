@@ -376,6 +376,398 @@ int main() {
 
 # Soal 3
 
+Shall Leglerg🥶 dan Carloss Signs 😎 adalah seorang pembalap F1 untuk tim Ferrari 🥵. Mobil F1 memiliki banyak pengaturan, seperti penghematan ERS, Fuel, Tire Wear dan lainnya. Pada minggu ini ada race di sirkuit Silverstone. Malangnya, seluruh tim Ferrari diracun oleh Super Max Max pada hari sabtu sehingga seluruh kru tim Ferrari tidak bisa membantu Shall Leglerg🥶 dan Carloss Signs 😎 dalam race. Namun, kru Ferrari telah menyiapkan program yang bisa membantu mereka dalam menyelesaikan race secara optimal. Program yang dibuat bisa mengatur pengaturan - pengaturan dalam mobil F1 yang digunakan dalam balapan. Programnya ber ketentuan sebagai berikut:
+Pada program actions.c, program akan berisi function function yang bisa di call oleh paddock.c
+Action berisikan sebagai berikut:
+- Gap [Jarak dengan driver di depan (float)]: Jika Jarak antara Driver dengan Musuh di depan adalah < 3.5s maka return Gogogo, jika jarak > 3.5s dan 10s return Push, dan jika jarak > 10s maka return Stay out of trouble.
+- Fuel [Sisa Bensin% (string/int/float)]: Jika bensin lebih dari 80% maka return Push Push Push, jika bensin di antara 50% dan 80% maka return You can go, dan jika bensin kurang dari 50% return Conserve Fuel.
+- Tire [Sisa Ban (int)]: Jika pemakaian ban lebih dari 80 maka return Go Push Go Push, jika pemakaian ban diantara 50 dan 80 return Good Tire Wear, jika pemakaian di antara 30 dan 50 return Conserve Your Tire, dan jika pemakaian ban kurang dari 30 maka return Box Box Box.
+Tire Change [Tipe ban saat ini (string)]: Jika tipe ban adalah Soft return Mediums Ready, dan jika tipe ban Medium return Box for Softs.
+
+```
+Contoh:
+[Driver] : [Fuel] [55%]
+[Paddock]: [You can go]
+
+```
+Pada paddock.c program berjalan secara daemon di background, bisa terhubung dengan driver.c melalui socket RPC.
+Program paddock.c dapat call function yang berada di dalam actions.c.
+Program paddock.c tidak keluar/terminate saat terjadi error dan akan log semua percakapan antara paddock.c dan driver.c di dalam file race.log
+
+Format log:
+[Source] [DD/MM/YY hh:mm:ss]: [Command] [Additional-info]
+ex :
+[Driver] [07/04/2024 08:34:50]: [Fuel] [55%]
+[Paddock] [07/04/2024 08:34:51]: [Fuel] [You can go]
+
+Program driver.c bisa terhubung dengan paddock.c dan bisa mengirimkan pesan dan menerima pesan serta menampilan pesan tersebut dari paddock.c sesuai dengan perintah atau function call yang diberikan.
+Jika bisa digunakan antar device/os (non local) akan diberi nilai tambahan.
+untuk mengaktifkan RPC call dari driver.c, bisa digunakan in-program CLI atau Argv (bebas) yang penting bisa send command seperti poin B dan menampilkan balasan dari paddock.c
+
+```		
+ex:
+Argv: 
+./driver -c Fuel -i 55% 
+in-program CLI:
+Command: Fuel
+Info: 55%
+```
+
+```
+Contoh direktori 😶‍🌫️:
+.		.
+├── client
+│   └── driver.c
+└── server
+    ├── actions.c
+    ├── paddock.c
+    └── race.log
+```
+
+## Penyelesaian
+
+### Action.c
+
+```c
+char* gap(float jarak) {
+    if (jarak < 3.5)
+        return "Gogogo";
+    else if (jarak >= 3.5 && jarak <= 10)
+        return "Push";
+    else
+        return "Stay out of trouble";
+}
+```
+char* gap(float jarak): Fungsi ini mengambil jarak sebagai parameter dalam kilometer dan memberikan saran kepada pengemudi berdasarkan jarak tersebut. Jika jarak kurang dari 3.5 km, saran yang diberikan adalah "Gogogo". Jika jarak antara 3.5 km dan 10 km, saran adalah "Push". Jika jarak lebih dari 10 km, saran adalah "Stay out of trouble".
+
+```c
+char* fuel(int talit) {
+    if (talit > 80)
+        return "Push Push Push";
+    else if (talit >= 50 && talit <= 80)
+        return "You can go";
+    else
+        return "Conserve Fuel";
+}
+```
+char* fuel(int talit): Fungsi ini mengambil tingkat bahan bakar sebagai parameter (dalam persentase) dan memberikan saran kepada pengemudi berdasarkan tingkat bahan bakar tersebut. Jika tingkat bahan bakar lebih dari 80%, saran yang diberikan adalah "Push Push Push". Jika tingkat bahan bakar antara 50% dan 80%, saran adalah "You can go". Jika tingkat bahan bakar kurang dari atau sama dengan 50%, saran adalah "Conserve Fuel".
+
+```c
+char* tire(int kanisir) {
+    if (kanisir > 80)
+        return "Go Push Go Push";
+    else if (kanisir >= 50 && kanisir <= 80)
+        return "Good Tire Wear";
+    else if (kanisir >= 30 && kanisir < 50)
+        return "Conserve Your Tire";
+    else
+        return "Box Box Box";
+}
+```
+
+char* tire(int kanisir): Fungsi ini mengambil tingkat keausan ban sebagai parameter (dalam persentase) dan memberikan saran kepada pengemudi berdasarkan tingkat keausan tersebut. Jika keausan ban lebih dari 80%, saran yang diberikan adalah "Go Push Go Push". Jika keausan ban antara 50% dan 80%, saran adalah "Good Tire Wear". Jika keausan ban antara 30% dan kurang dari 50%, saran adalah "Conserve Your Tire". Jika keausan ban kurang dari atau sama dengan 30%, saran adalah "Box Box Box".
+
+```c
+char* tire_change(char* current_tire) {
+    if (strcmp(current_tire, "Soft") == 0)
+        return "Mediums Ready";
+    else if (strcmp(current_tire, "Medium") == 0)
+        return "Box for Softs";
+    else
+        return "Invalid tire type";
+}
+```
+
+char* tire_change(char* current_tire): Fungsi ini mengambil jenis ban saat ini sebagai parameter dan memberikan saran kepada pengemudi tentang jenis ban yang harus dipasang berikutnya. Jika jenis ban saat ini adalah "Soft", saran yang diberikan adalah "Mediums Ready". Jika jenis ban saat ini adalah "Medium", saran adalah "Box for Softs". Jika jenis ban saat ini tidak dikenali, saran adalah "Invalid tire type".
+
+```c
+char* MauMuApaSu(){
+    return "GOBLOG";
+
+}
+```
+char* MauMuApaSu(): Ini adalah fungsi yang memberikan jawaban yang agak kasar "GOBLOG". Fungsi ini mungkin dimaksudkan sebagai easter egg atau lelucon dalam kode.
+
+### Driver.c
+
+#### Inklusi Header
+
+```c
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+```
+
+Di sini, beberapa header standar dan sistem digunakan:
+
+- stdio.h: Untuk fungsi input-output standar.
+- sys/socket.h: Untuk operasi socket.
+- stdlib.h: Untuk fungsi-fungsi umum seperti alokasi memori.
+- netinet/in.h: Untuk struktur data dan konstanta yang berkaitan dengan jaringan, khususnya untuk IPv4.
+- string.h: Untuk fungsi manipulasi string seperti memset dan strlen.
+- unistd.h: Untuk fungsi-fungsi sistem POSIX seperti close.
+- arpa/inet.h: Untuk fungsi-fungsi konversi alamat IP.
+
+#### Definisi Port
+
+```c
+
+#define PORT 8080
+```
+
+Ini adalah konstanta yang mendefinisikan port yang akan digunakan dalam koneksi.
+
+#### Fungsi Utama (main())
+
+```c
+
+int main(int argc, char const *argv[])
+```
+
+Ini adalah fungsi utama dari program. Ini menerima argumen baris perintah, meskipun dalam kode yang diberikan, argumen tersebut tidak digunakan.
+
+#### Membuat Socket
+
+```c
+
+int sock = 0;
+sock = socket(AF_INET, SOCK_STREAM, 0);
+```
+Pertama-tama, program membuat sebuah soket menggunakan fungsi socket(). Parameter pertama AF_INET menunjukkan bahwa ini adalah domain alamat IPv4. Parameter kedua SOCK_STREAM menunjukkan bahwa ini adalah soket TCP. Parameter ketiga yang diberikan sebagai 0 menunjukkan bahwa protokol default untuk TCP akan digunakan.
+
+#### Menetapkan Alamat Server
+
+```c
+
+struct sockaddr_in serv_addr;
+memset(&serv_addr, '0', sizeof(serv_addr));
+serv_addr.sin_family = AF_INET;
+serv_addr.sin_port = htons(PORT);
+```
+
+Struktur sockaddr_in digunakan untuk menetapkan alamat server. Fungsi memset() digunakan untuk menginisialisasi struktur tersebut dengan nol. Kemudian, kita menetapkan domain alamat (sin_family) sebagai AF_INET (IPv4) dan port (sin_port) sebagai PORT yang telah didefinisikan sebelumnya.
+
+#### Membuat Koneksi
+
+```c
+
+connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))
+```
+
+Fungsi connect() digunakan untuk membuat koneksi ke server yang ditentukan oleh alamat dan port yang telah ditetapkan sebelumnya.
+
+Bagian ini adalah bagian utama dari program yang memungkinkan pengguna untuk berinteraksi dengan server secara langsung melalui klien yang dibuat. Ini menggunakan loop tak terbatas (while(1)) untuk terus menerima input dari pengguna dan mengirimkannya ke server.
+
+
+```c
+
+while (1) {
+```
+
+Ini adalah loop tak terbatas yang akan terus berjalan sampai kondisi berhenti dipenuhi.
+
+```c
+printf("Enter message: ");
+```
+
+Ini mencetak pesan untuk meminta pengguna memasukkan pesan yang ingin dikirim ke server.
+
+```c
+memset(bapak, 0, sizeof(bapak));
+```
+
+memset() digunakan untuk mengatur ulang array bapak menjadi nol. Ini memastikan bahwa tidak ada data yang tersisa dari iterasi sebelumnya.
+
+```c
+fgets(bapak, sizeof(bapak), stdin);
+```
+
+fgets() digunakan untuk membaca input dari pengguna dari stdin (standar input) dan menyimpannya dalam array bapak.
+
+```c
+bapak[strcspn(bapak, "\n")] = '\0';
+```
+Ini menghapus karakter newline (\n) dari akhir string yang dibaca oleh fgets(). Hal ini dilakukan karena fgets() akan menambahkan karakter newline ke dalam string yang dibaca.
+
+```c
+if (strcmp(bapak, "exit") == 0) {
+    printf("Exiting...\n");
+    break;
+}
+```
+
+Program memeriksa apakah pesan yang dimasukkan oleh pengguna adalah "exit". Jika iya, program mencetak pesan "Exiting..." dan keluar dari loop dengan pernyataan break, sehingga program selesai.
+
+```c
+send(sock, bapak, strlen(bapak), 0);
+```
+
+Pesan yang dimasukkan oleh pengguna dikirim ke server menggunakan send().
+
+```c
+memset(bapak, 0, sizeof(bapak));
+```
+
+Setelah mengirim pesan ke server, array bapak diatur ulang menjadi nol untuk menyiapkan penerimaan pesan dari server.
+
+```c
+valread = recv(sock, bapak, sizeof(bapak), 0);
+```
+Program menerima respons dari server menggunakan recv() dan menyimpannya dalam array bapak.
+
+```c
+printf("[Papa]: [%s]\n", bapak);
+```
+Respons dari server dicetak ke layar dengan label [Papa].
+
+```c
+close(sock);
+  return 0;
+}
+```
+Setelah keluar dari loop, koneksi socket ditutup dengan close(sock) dan program keluar dengan return 0.
+
+### Paddock.c
+
+Inklusi Header
+```c
+#include "action.c"
+#include <stdio.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+```
+Kode ini mengimpor beberapa header yang diperlukan untuk operasi socket dan fungsi-fungsi standar.
+
+Definisi Makro
+```c
+#define PORT 8080
+```
+Makro ini mendefinisikan port yang akan digunakan oleh server.
+
+Deklarasi Fungsi-fungsi
+```c
+void log_message(char* source, char* command, char* additional_info);
+char* rpc_call(char* command, char* info);
+```
+
+Dua fungsi ini dideklarasikan di bagian atas kode. log_message digunakan untuk mencatat pesan dalam file log, sementara rpc_call digunakan untuk memproses perintah yang diterima dari klien.
+
+Implementasi Fungsi log_message
+```c
+void log_message(char* source, char* command, char* additional_info) {
+    FILE *fp;
+    fp = fopen("race.log", "a");
+    if (fp == NULL) {
+        printf("Error opening file race.log.\n");
+        return;
+    }
+    fprintf(fp, "[%s] [%s]: [%s]\n", source, command, additional_info);
+    fclose(fp);
+}
+```
+
+Fungsi ini digunakan untuk mencatat pesan dalam file log dengan format yang ditentukan.
+
+Implementasi Fungsi rpc_call
+
+```c
+char* rpc_call(char* command, char* info) {
+    char* response = "";
+    // Memproses perintah sesuai dengan command yang diterima
+    // ...
+    log_message("Paddock", command, response);
+    return response;
+}
+```
+
+Fungsi ini memproses perintah yang diterima dari klien berdasarkan perintah yang diberikan. Setelah memproses perintah, ia mencatat pesan dalam log dan mengembalikan respons yang akan dikirimkan kembali ke klien.
+
+Fungsi main()
+```c
+int main(int argc, char const *argv[]) {
+    // ...
+}
+```
+
+Ini adalah fungsi utama dari server.
+
+Membuat Socket
+```c
+
+int server_fd, new_socket, valread, n;
+struct sockaddr_in address;
+int opt = 1;
+int addrlen = sizeof(address);
+char bapak[1024] = {0};
+char *hello = "Hello from server";
+  
+if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    perror("socket failed");
+    exit(EXIT_FAILURE);
+}
+```
+
+Di sini, server membuat socket menggunakan socket(). Kemudian, mengonfigurasi opsi socket dengan setsockopt() untuk mengizinkan penggunaan ulang alamat dan port.
+Mengikat dan Mendengarkan Port
+
+```c
+address.sin_family = AF_INET;
+address.sin_addr.s_addr = INADDR_ANY;
+address.sin_port = htons( PORT );
+
+if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0) {
+    perror("bind failed");
+    exit(EXIT_FAILURE);
+}
+
+if (listen(server_fd, 3) < 0) {
+    perror("listen");
+    exit(EXIT_FAILURE);
+}
+```
+
+Setelah membuat socket, server mengikatnya ke alamat dan port yang ditentukan dengan bind(), kemudian mendengarkan koneksi masuk dengan listen().
+Menerima dan Memproses Permintaan Klien
+
+```c
+if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
+    perror("accept");
+    exit(EXIT_FAILURE);
+}
+
+while(1){
+    char *balik;
+    n = read(new_socket, bapak, 1024);
+    char ayah[100], ibu[100], anak[100], kakek[100];
+    sscanf(bapak, "%s %s %s", ayah, ibu, anak);
+    if(strcmp(ibu, "Change") == 0){
+        sprintf(kakek, "%s %s", ayah, ibu);
+        balik = rpc_call(kakek, anak);
+    }
+    else balik = rpc_call(ayah, ibu);
+    send(new_socket, balik, strlen(balik), 0);
+}
+```
+
+Server menerima koneksi dari klien menggunakan accept(), kemudian masuk ke dalam loop tak terbatas untuk menerima dan memproses permintaan dari klien. Setiap permintaan yang diterima dibaca menggunakan read(), diproses dengan rpc_call(), dan responsnya dikirim kembali ke klien dengan send().
+
+## Contoh Output
+
+![Screenshot from 2024-05-11 14-20-36](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/144967723/bd6a181b-0792-4630-b13b-aecdba527d4d)
+
+## Contoh Output File Log
+![Screenshot from 2024-05-11 14-21-32](https://github.com/DaffaEA/Sisop-3-2024-MH-IT06/assets/144967723/ed72e657-add2-4bfb-9cb0-d858ef0d37b3)
+
+
 # Soal 4
 
 ## Isi Soal
